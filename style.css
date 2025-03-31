@@ -1163,34 +1163,9 @@ h1::after {
     to { background-color: transparent; }
 }
 
-/* Ajoutez à la fin de style.css */
-.connection-status {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 10px 15px;
-    border-radius: 20px;
-    font-weight: 600;
-    box-shadow: var(--shadow-sm);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
 
-.connection-status.online {
-    background-color: #4CAF50;
-    color: white;
-}
 
-.connection-status.offline {
-    background-color: #F44336;
-    color: white;
-}
 
-.connection-status i {
-    font-size: 1.2rem;
-}
 
 .sync-spinner {
     display: inline-block;

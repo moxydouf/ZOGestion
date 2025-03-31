@@ -1,175 +1,108 @@
 document.addEventListener("DOMContentLoaded", () => {
-    console.log("✅ Application chargée !");
+    console.log("✅ Application locale chargée !");
     remplirSelectAnnee();
     remplirSelectLogement();
     chargerReservations();
     initExcelImport();
 });
 
-// Variables globales pour la gestion de l'import Excel
 // Variables globales
 let importedExcelData = [];
 let currentExcelIndex = -1;
-let isOnline = navigator.onLine;
-let syncInProgress = false;
 
-// Écouteur de statut réseau
-window.addEventListener('online', () => {
-    isOnline = true;
-    checkAndSync();
-    console.log("Connecté à Internet - Synchronisation activée");
-});
-
-window.addEventListener('offline', () => {
-    isOnline = false;
-    console.log("Mode hors ligne - Utilisation des données locales");
-});
-
-// Initialisation
-document.addEventListener("DOMContentLoaded", async () => {
-    console.log("✅ Application chargée !");
-    await initAuth();
-    remplirSelectAnnee();
-    remplirSelectLogement();
-    await chargerReservations();
-    initExcelImport();
-    checkAndSync();
-});
-
-// Authentification
-async function initAuth() {
-    try {
-        await auth.signInAnonymously();
-        console.log("Authentifié anonymement avec Firebase");
-    } catch (error) {
-        console.error("Erreur d'authentification:", error);
+// Fonctions de base (conservées mais simplifiées)
+function remplirSelectAnnee() {
+    const selectYear = document.getElementById("select-year");
+    const currentYear = new Date().getFullYear();
+    selectYear.innerHTML = '';
+    
+    for (let i = currentYear - 2; i <= currentYear + 1; i++) {
+        const option = document.createElement("option");
+        option.value = i;
+        option.textContent = i;
+        selectYear.appendChild(option);
     }
+    selectYear.value = currentYear;
 }
 
-// Fonction de synchronisation
-async function checkAndSync() {
-    if (!isOnline || syncInProgress) return;
-    
-    syncInProgress = true;
-    console.log("Début de la synchronisation...");
-    
-    try {
-        // 1. Récupérer les données locales non synchronisées
-        const localReservations = JSON.parse(localStorage.getItem("reservations")) || [];
-        const unsynced = localReservations.filter(r => !r.synced);
-        
-        // 2. Envoyer les données non synchronisées
-        const batch = db.batch();
-        const reservationsRef = db.collection("reservations");
-        
-        unsynced.forEach(res => {
-            const newRef = reservationsRef.doc();
-            batch.set(newRef, {
-                ...res,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                synced: true
-            });
-            res.firebaseId = newRef.id; // Stocker l'ID Firebase localement
-        });
-        
-        await batch.commit();
-        
-        // 3. Mettre à jour le statut local
-        localReservations.forEach(r => r.synced = true);
-        localStorage.setItem("reservations", JSON.stringify(localReservations));
-        
-        // 4. Récupérer les données du serveur
-        const snapshot = await reservationsRef
-            .orderBy("lastUpdated", "desc")
-            .get();
-            
-        const serverData = snapshot.docs.map(doc => ({
-            firebaseId: doc.id,
-            ...doc.data()
-        }));
-        
-        // 5. Fusionner les données
-        const merged = mergeReservations(localReservations, serverData);
-        localStorage.setItem("reservations", JSON.stringify(merged));
-        
-        console.log("Synchronisation réussie !");
-        chargerReservations();
-    } catch (error) {
-        console.error("Erreur de synchronisation:", error);
-    } finally {
-        syncInProgress = false;
-    }
-}
-
-function mergeReservations(local, server) {
-    const merged = [...local];
-    
-    server.forEach(serverRes => {
-        const existingIndex = merged.findIndex(r => r.firebaseId === serverRes.firebaseId);
-        
-        if (existingIndex === -1) {
-            // Nouvelle réservation du serveur
-            merged.push(serverRes);
-        } else {
-            // Conflit - on garde la version la plus récente
-            const localRes = merged[existingIndex];
-            const serverDate = serverRes.lastUpdated?.toDate() || new Date(0);
-            const localDate = new Date(localRes.lastUpdated || 0);
-            
-            if (serverDate > localDate) {
-                merged[existingIndex] = serverRes;
-            }
-        }
-    });
-    
-    return merged;
-}
-
-// Modifié: sauvegarderReservation
-async function sauvegarderReservation(prenom, nom, cin, telephone, dateDebut, dateFin, duree, prix, 
-                              logement, emplacement, photoCin, photoPasseport) {
-    const reservation = { 
-        prenom, nom, cin, telephone, dateDebut, dateFin, duree, prix, 
-        logement, emplacement, photoCin, photoPasseport,
-        lastUpdated: new Date().toISOString(),
-        synced: false
-    };
-    
+function remplirSelectLogement() {
+    const selectLogement = document.getElementById("select-logement");
     const reservations = JSON.parse(localStorage.getItem("reservations")) || [];
-    reservations.push(reservation);
-    localStorage.setItem("reservations", JSON.stringify(reservations));
+    selectLogement.innerHTML = '<option value="tous">Tous les logements</option>';
     
-    if (isOnline) {
-        try {
-            const docRef = await db.collection("reservations").add({
-                ...reservation,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                synced: true
-            });
-            
-            reservation.firebaseId = docRef.id;
-            reservation.synced = true;
-            localStorage.setItem("reservations", JSON.stringify(reservations));
-        } catch (error) {
-            console.error("Erreur de sauvegarde en ligne:", error);
-        }
-    }
-    
-    chargerReservations();
-    document.getElementById("reservation-form").reset();
-    remplirSelectLogement();
+    const logementsUniques = [...new Set(reservations.map(r => r.logement).filter(Boolean))];
+    logementsUniques.forEach(logement => {
+        const option = document.createElement("option");
+        option.value = logement;
+        option.textContent = logement;
+        selectLogement.appendChild(option);
+    });
+
+    document.getElementById("total-logements").textContent = logementsUniques.length;
 }
 
-// Modifié: chargerReservations
-async function chargerReservations() {
-    let reservations = JSON.parse(localStorage.getItem("reservations")) || [];
+// Gestion des réservations (version locale pure)
+document.getElementById("reservation-form").addEventListener("submit", (event) => {
+    event.preventDefault();
     
-    // Si en ligne, vérifier les mises à jour
-    if (isOnline && !syncInProgress) {
-        await checkAndSync();
-        reservations = JSON.parse(localStorage.getItem("reservations")) || [];
+    const formData = {
+        prenom: document.getElementById("prenom").value.trim(),
+        nom: document.getElementById("nom").value.trim(),
+        cin: document.getElementById("cin").value.trim(),
+        telephone: document.getElementById("telephone").value.trim(),
+        dateDebut: document.getElementById("date-debut").value,
+        dateFin: document.getElementById("date-fin").value,
+        prix: parseFloat(document.getElementById("prix").value),
+        logement: document.getElementById("logement").value.trim(),
+        emplacement: document.getElementById("emplacement").value.trim(),
+        photoCin: "Pas de photo",
+        photoPasseport: "Pas de photo"
+    };
+
+    // Validation
+    if (Object.values(formData).some(v => v === "" || isNaN(formData.prix))) {
+        alert("Veuillez remplir tous les champs correctement !");
+        return;
     }
-    
+
+    // Gestion des photos
+    const handlePhoto = (fileInputId) => {
+        return new Promise(resolve => {
+            const file = document.getElementById(fileInputId).files[0];
+            if (!file) resolve("Pas de photo");
+            
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(file);
+        });
+    };
+
+    Promise.all([
+        handlePhoto("photo-cin"),
+        handlePhoto("photo-passeport")
+    ]).then(([photoCin, photoPasseport]) => {
+        formData.photoCin = photoCin;
+        formData.photoPasseport = photoPasseport;
+        
+        // Calcul de la durée
+        const debut = new Date(formData.dateDebut);
+        const fin = new Date(formData.dateFin);
+        formData.duree = Math.max(0, Math.ceil((fin - debut) / (1000 * 60 * 60 * 24))) + " jours";
+
+        // Sauvegarde locale
+        const reservations = JSON.parse(localStorage.getItem("reservations")) || [];
+        reservations.push(formData);
+        localStorage.setItem("reservations", JSON.stringify(reservations));
+
+        // Mise à jour UI
+        chargerReservations();
+        document.getElementById("reservation-form").reset();
+        remplirSelectLogement();
+    });
+});
+
+function chargerReservations() {
+    const reservations = JSON.parse(localStorage.getItem("reservations")) || [];
     const list = document.getElementById("reservation-list");
     list.innerHTML = "";
 
@@ -190,9 +123,15 @@ async function chargerReservations() {
         list.appendChild(tr);
     });
 
+    // Gestion des suppressions
     document.querySelectorAll(".supprimer-btn").forEach(button => {
-        button.addEventListener("click", async (event) => {
-            await supprimerReservation(event.target.dataset.index);
+        button.addEventListener("click", (event) => {
+            const index = event.target.dataset.index;
+            let reservations = JSON.parse(localStorage.getItem("reservations")) || [];
+            reservations.splice(index, 1);
+            localStorage.setItem("reservations", JSON.stringify(reservations));
+            chargerReservations();
+            remplirSelectLogement();
         });
     });
 
@@ -769,3 +708,17 @@ async function checkAndSync() {
     syncInProgress = false;
     updateConnectionStatus();
 }
+// Test unitaire simple à ajouter en fin de fichier
+function testLocalStorage() {
+    const testData = { test: "OK" };
+    localStorage.setItem("test", JSON.stringify(testData));
+    const retrieved = JSON.parse(localStorage.getItem("test"));
+    
+    console.assert(
+        retrieved.test === "OK",
+        "⚠️ Erreur: Le stockage local ne fonctionne pas"
+    );
+    console.log("Test localStorage:", retrieved.test === "OK" ? "✅ OK" : "❌ Échec");
+}
+
+testLocalStorage();

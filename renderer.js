@@ -708,17 +708,3 @@ async function checkAndSync() {
     syncInProgress = false;
     updateConnectionStatus();
 }
-// Test unitaire simple à ajouter en fin de fichier
-function testLocalStorage() {
-    const testData = { test: "OK" };
-    localStorage.setItem("test", JSON.stringify(testData));
-    const retrieved = JSON.parse(localStorage.getItem("test"));
-    
-    console.assert(
-        retrieved.test === "OK",
-        "⚠️ Erreur: Le stockage local ne fonctionne pas"
-    );
-    console.log("Test localStorage:", retrieved.test === "OK" ? "✅ OK" : "❌ Échec");
-}
-
-testLocalStorage();

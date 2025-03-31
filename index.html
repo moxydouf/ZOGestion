@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Réservations Airbnb</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Gestion des Réservations Airbnb</h1>
+
+        <div class="tab-container">
+            <!-- Navigation par onglets -->
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="openTab('add-tab')">
+                    <i class="fas fa-plus-circle"></i> Ajouter
+                </button>
+                <button class="tab-btn" onclick="openTab('list-tab')">
+                    <i class="fas fa-list"></i> Liste
+                </button>
+                <button class="tab-btn" onclick="openTab('stats-tab')">
+                    <i class="fas fa-chart-bar"></i> Stats
+                </button>
+                <button class="tab-btn" onclick="openTab('export-tab')">
+                    <i class="fas fa-file-export"></i> Exporter
+                </button>
+            </div>
+
+            <!-- Onglet Ajout -->
+            <div id="add-tab" class="tab-content active">
+                <form id="reservation-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="prenom"><i class="fas fa-user"></i> Prénom:</label>
+                            <input type="text" id="prenom" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="nom"><i class="fas fa-user-tag"></i> Nom:</label>
+                            <input type="text" id="nom" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cin"><i class="fas fa-id-card"></i> CIN:</label>
+                            <input type="text" id="cin" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="telephone"><i class="fas fa-phone"></i> Téléphone:</label>
+                            <input type="tel" id="telephone" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="date-debut"><i class="fas fa-calendar-day"></i> Date début:</label>
+                            <input type="date" id="date-debut" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="date-fin"><i class="fas fa-calendar-week"></i> Date fin:</label>
+                            <input type="date" id="date-fin" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="prix"><i class="fas fa-money-bill-wave"></i> Prix (DH):</label>
+                            <input type="number" id="prix" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="logement"><i class="fas fa-home"></i> Logement:</label>
+                            <input type="text" id="logement" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="emplacement"><i class="fas fa-map-marker-alt"></i> Emplacement:</label>
+                            <input type="text" id="emplacement" required>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="photo"><i class="fas fa-camera"></i> Photo CIN:</label>
+                            <input type="file" id="photo" accept="image/*">
+                        </div>
+                    </div>
+                    <button type="submit" class="submit-btn">
+                        <i class="fas fa-save"></i> Enregistrer
+                    </button>
+                </form>
+            </div>
+
+            <!-- Onglet Liste -->
+            <div id="list-tab" class="tab-content">
+                <div class="table-container">
+                    <table id="reservation-table">
+                        <thead>
+                            <tr>
+                                <th>Prénom</th>
+                                <th>Nom</th>
+                                <th>Dates</th>
+                                <th>Durée</th>
+                                <th>Prix</th>
+                                <th>Photo</th>
+                                <th>Logement</th>
+                                <th>Emplacement</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reservation-list"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Onglet Statistiques -->
+            <div id="stats-tab" class="tab-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-week"></i>
+                        </div>
+                        <h3>Ce Mois</h3>
+                        <p id="total-mensuel">0 DH</p>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <h3>Cette Année</h3>
+                        <p id="total-annuel">0 DH</p>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-home"></i>
+                        </div>
+                        <h3>Logements</h3>
+                        <p id="total-logements">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onglet Export -->
+            <div id="export-tab" class="tab-content">
+                <div class="export-section">
+                    <h3><i class="fas fa-file-pdf"></i> Export PDF</h3>
+                    <div class="export-controls">
+                        <div class="control-group">
+                            <label for="select-year"><i class="fas fa-calendar"></i> Année:</label>
+                            <select id="select-year"></select>
+                        </div>
+                        <div class="control-group">
+                            <label for="select-month"><i class="fas fa-monthly"></i> Mois:</label>
+                            <select id="select-month">
+                                <option value="0">Janvier</option>
+                                <option value="1">Février</option>
+                                <option value="2">Mars</option>
+                                <option value="3">Avril</option>
+                                <option value="4">Mai</option>
+                                <option value="5">Juin</option>
+                                <option value="6">Juillet</option>
+                                <option value="7">Août</option>
+                                <option value="8">Septembre</option>
+                                <option value="9">Octobre</option>
+                                <option value="10">Novembre</option>
+                                <option value="11">Décembre</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label for="select-logement"><i class="fas fa-home"></i> Logement:</label>
+                            <select id="select-logement">
+                                <option value="tous">Tous les logements</option>
+                            </select>
+                        </div>
+                        <div class="button-group">
+                            <button id="export-pdf-mois" class="export-btn">
+                                <i class="fas fa-download"></i> Exporter le Mois
+                            </button>
+                            <button id="export-pdf-annee" class="export-btn">
+                                <i class="fas fa-download"></i> Exporter l'Année
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="renderer.js"></script>
+    <script>
+        function openTab(tabId) {
+            // Masquer tous les onglets
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Désactiver tous les boutons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Activer l'onglet sélectionné
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+    </script>
+</body>
+</html>

@@ -8,13 +8,40 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+</head>
+<head>
+    <!-- Ajoutez ces scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+      
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyDoP6PYSabUisrTkbNCDaEm1V753w0PBbE",
+          authDomain: "airbnb-e6681.firebaseapp.com",
+          projectId: "airbnb-e6681",
+          storageBucket: "airbnb-e6681.firebasestorage.app",
+          messagingSenderId: "630895852425",
+          appId: "1:630895852425:web:4d1bcf1a7eab6f0bef7f58"
+        };
+      
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+      </script>
 </head>
 <body>
     <div class="container">
         <h1>Gestion des Réservations Airbnb</h1>
 
         <div class="tab-container">
-            <!-- Navigation par onglets -->
             <div class="tab-nav">
                 <button class="tab-btn active" onclick="openTab('add-tab')">
                     <i class="fas fa-plus-circle"></i> Ajouter
@@ -30,7 +57,6 @@
                 </button>
             </div>
 
-            <!-- Onglet Ajout -->
             <div id="add-tab" class="tab-content active">
                 <form id="reservation-form">
                     <div class="form-grid">
@@ -71,17 +97,67 @@
                             <input type="text" id="emplacement" required>
                         </div>
                         <div class="form-group full-width">
-                            <label for="photo"><i class="fas fa-camera"></i> Photo CIN:</label>
-                            <input type="file" id="photo" accept="image/*">
+                            <label for="photo-cin"><i class="fas fa-camera"></i> Photo CIN:</label>
+                            <input type="file" id="photo-cin" accept="image/*">
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="photo-passeport"><i class="fas fa-camera"></i> Photo de Passeport:</label>
+                            <input type="file" id="photo-passeport" accept="image/*">
                         </div>
                     </div>
                     <button type="submit" class="submit-btn">
                         <i class="fas fa-save"></i> Enregistrer
                     </button>
                 </form>
+
+                <div class="excel-import-section">
+                    <h3><i class="fas fa-file-excel"></i> Importation depuis Excel</h3>
+                    <div class="import-container">
+                        <div class="import-dropzone" id="excel-dropzone">
+                            <i class="fas fa-file-excel"></i>
+                            <h4>Glissez-déposez votre fichier Excel ici</h4>
+                            <p>ou cliquez pour sélectionner un fichier</p>
+                            <input type="file" id="excel-file" accept=".xlsx, .xls, .csv">
+                        </div>
+                        
+                        <div class="import-preview" id="excel-preview" style="max-height: 400px; overflow: auto;"></div>
+                        
+                        <div class="import-loading" id="excel-loading">
+                            <div class="loading-spinner"></div>
+                            <p>Traitement en cours...</p>
+                        </div>
+                        
+                        <div class="import-success" id="excel-success">
+                            <i class="fas fa-check-circle"></i>
+                            <h4>Données prêtes !</h4>
+                            <p id="import-count"></p>
+                        </div>
+                        
+                        <div class="import-actions">
+                            <button class="import-btn secondary" id="excel-cancel">
+                                <i class="fas fa-times"></i> Annuler
+                            </button>
+                            <button class="import-btn" id="excel-prev" disabled>
+                                <i class="fas fa-arrow-left"></i> Précédent
+                            </button>
+                            <button class="import-btn primary" id="excel-confirm">
+                                <i class="fas fa-check"></i> Remplir
+                            </button>
+                            <button class="import-btn" id="excel-next" disabled>
+                                <i class="fas fa-arrow-right"></i> Suivant
+                            </button>
+                            <div id="progress-indicator" class="progress-indicator">
+                                Entrée 0/0
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Onglet Liste -->
+
+                </div>
+            </div>
+
             <div id="list-tab" class="tab-content">
                 <div class="table-container">
                     <table id="reservation-table">
@@ -92,7 +168,8 @@
                                 <th>Dates</th>
                                 <th>Durée</th>
                                 <th>Prix</th>
-                                <th>Photo</th>
+                                <th>Photo CIN</th>
+                                <th>Photo Passeport</th>
                                 <th>Logement</th>
                                 <th>Emplacement</th>
                                 <th>Actions</th>
@@ -103,7 +180,6 @@
                 </div>
             </div>
 
-            <!-- Onglet Statistiques -->
             <div id="stats-tab" class="tab-content">
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -130,7 +206,6 @@
                 </div>
             </div>
 
-            <!-- Onglet Export -->
             <div id="export-tab" class="tab-content">
                 <div class="export-section">
                     <h3><i class="fas fa-file-pdf"></i> Export PDF</h3>
@@ -140,7 +215,7 @@
                             <select id="select-year"></select>
                         </div>
                         <div class="control-group">
-                            <label for="select-month"><i class="fas fa-monthly"></i> Mois:</label>
+                            <label for="select-month"><i class="fas fa-calendar"></i> Mois:</label>
                             <select id="select-month">
                                 <option value="0">Janvier</option>
                                 <option value="1">Février</option>
@@ -179,20 +254,22 @@
     <script src="renderer.js"></script>
     <script>
         function openTab(tabId) {
-            // Masquer tous les onglets
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Désactiver tous les boutons
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            // Activer l'onglet sélectionné
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             event.currentTarget.classList.add('active');
         }
     </script>
+    <body>
+        <!-- Ajoutez ce div avant le container -->
+        <div id="connectionStatus" class="connection-status offline">
+            <i class="fas fa-wifi"></i>
+            <span>Hors ligne</span>
+        </div>
+        
+        <div class="container">
+            <!-- Votre contenu existant -->
+        </div>
+    </body>
 </body>
 </html>
